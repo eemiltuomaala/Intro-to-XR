@@ -6,14 +6,14 @@ using UnityEngine.InputSystem;
 public class Light_Switch : MonoBehaviour
 {
     public InputActionReference action;
-    private Light light;
+    private Light lightSource;
     private Color[] colors = {Color.white, Color.red, Color.green, Color.blue};
     private int colorIndex = 0;
 
     private void Start()
     {
-        light = GetComponent<Light>();        
-        if (light == null)
+        lightSource = GetComponent<Light>();        
+        if (lightSource == null)
         {
             Debug.LogError("Light component not found on the GameObject.");
         }
@@ -24,10 +24,10 @@ public class Light_Switch : MonoBehaviour
 
     void CycleColors()
     {
-        if (light != null) 
+        if (lightSource != null) 
         {
             colorIndex = (colorIndex + 1) % colors.Length;
-            light.color = colors[colorIndex];
+            lightSource.color = colors[colorIndex];
         }
     }
 }
