@@ -9,7 +9,9 @@ public class CustomGrab : MonoBehaviour
     // Make sure to define the input in the editor (LeftHand/Grip and RightHand/Grip recommended respectively)
     CustomGrab otherHand = null;
     public List<Transform> nearObjects = new List<Transform>();
+    public List<Transform> nearInteractions = new List<Transform>();
     public Transform grabbedObject = null;
+    public Transform interactObject = null;
     public InputActionReference action;
     public InputActionReference doubleRotationAction;
     bool grabbing = false;
@@ -37,9 +39,21 @@ public class CustomGrab : MonoBehaviour
         if (grabbing)
         {
             // Grab nearby object or the object in the other hand
-            if (!grabbedObject)
+            if (!grabbedObject && !interactObject)
             {
-                grabbedObject = nearObjects.Count > 0 ? nearObjects[0] : otherHand.grabbedObject;
+                if (nearInteractions.Count > 0)
+                {
+                    interactObject = nearInteractions[0];
+                } 
+                else if (nearObjects.Count > 0)
+                {
+                    grabbedObject = nearObjects[0];
+                }
+                else
+                {
+                    grabbedObject = otherHand.grabbedObject;
+                }
+                //grabbedObject = nearObjects.Count > 0 ? nearObjects[0] : otherHand.grabbedObject;
             }
 
             if (grabbedObject)
@@ -70,11 +84,32 @@ public class CustomGrab : MonoBehaviour
                 objectToController = deltaRotation * objectToController;
                 grabbedObject.position = transform.position - objectToController;
             }
+
+            if (interactObject)
+            { 
+                Gear gear = interactObject.GetComponent<Gear>();
+                if (gear != null) {
+                    // Calculate angular change based on controller movement
+                    Vector3 pivot = interactObject.position; 
+                    Vector3 controllerToObject = transform.position - pivot;
+                    Vector3 previousControllerToObject = previousPosition - pivot;
+
+                    Quaternion rotationChange =  Quaternion.FromToRotation(previousControllerToObject, controllerToObject);
+
+                    // Restrict rotation to the gear's axis
+                    float angle = Vector3.SignedAngle(previousControllerToObject, controllerToObject, gear.rotationAxis);
+                    rotationChange = Quaternion.AngleAxis(angle, gear.rotationAxis);
+
+                    // Apply the calculated rotation change to the gear
+                    interactObject.rotation = rotationChange * interactObject.rotation;
+                }
+            }
         }
         // If let go of button, release object
-        else if (grabbedObject) 
+        else if (grabbedObject || interactObject) 
         {
             grabbedObject = null;
+            interactObject = null;
         }
         // Save the current position and rotation
         previousPosition = transform.position;
@@ -92,6 +127,8 @@ public class CustomGrab : MonoBehaviour
         Transform t = other.transform;
         if(t && t.tag.ToLower()=="grabbable")
             nearObjects.Add(t);
+        if(t && t.tag.ToLower()=="interactable")
+            nearInteractions.Add(t);
     }
 
     private void OnTriggerExit(Collider other)
@@ -99,5 +136,7 @@ public class CustomGrab : MonoBehaviour
         Transform t = other.transform;
         if( t && t.tag.ToLower()=="grabbable")
             nearObjects.Remove(t);
+        if(t && t.tag.ToLower()=="interactable")
+            nearInteractions.Remove(t);
     }
 }
